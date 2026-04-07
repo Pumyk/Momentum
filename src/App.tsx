@@ -1,8 +1,4 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
+// Main entry point for the Momentum app
 import { Auth } from './components/Auth';
 import { Layout } from './components/Layout';
 import { TooltipProvider } from '@/components/ui/tooltip';

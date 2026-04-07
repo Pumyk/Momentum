@@ -1,5 +1,5 @@
 {
   "name": "Momentum",
-  "description": "A feature-rich productivity app with NLP date parsing, Kanban, Calendar, and Gamification.",
+  "description": "A productivity dashboard built for my school project. Includes tasks, habits, and a timer.",
   "requestFramePermissions": []
 }

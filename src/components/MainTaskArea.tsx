@@ -183,9 +183,16 @@ export function MainTaskArea() {
             </div>
           ))}
           {tasks.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-20 text-zinc-500">
-              <img src="https://picsum.photos/seed/empty/200/200" alt="Empty" className="mb-4 h-32 w-32 opacity-50 grayscale" referrerPolicy="no-referrer" />
-              <p>No tasks here. Add one below!</p>
+            <div className="flex flex-col items-center justify-center py-20">
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="h-20 w-20 rounded-full border-2 border-dashed border-zinc-200 text-zinc-400 hover:border-blue-500 hover:text-blue-500 dark:border-zinc-800"
+                onClick={() => document.querySelector('input')?.focus()}
+              >
+                <Plus size={40} strokeWidth={1.5} />
+              </Button>
+              <p className="mt-4 text-sm text-zinc-500">No tasks here. Add one below!</p>
             </div>
           )}
         </div>

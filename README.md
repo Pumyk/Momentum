@@ -1,20 +1,25 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Momentum - Productivity App
 
-# Run and deploy your AI Studio app
+ It's a productivity dashboard that helps users manage their time and tasks.
 
-This contains everything you need to run your app locally.
+## Features
+- **Task Management**: Create and organize tasks with due dates.
+- **Habit Tracker**: Keep track of daily habits and streaks.
+- **Pomodoro Timer**: Stay focused with a built-in timer.
+- **Firebase Integration**: All data is synced to the cloud so you can access it anywhere.
 
-View your app in AI Studio: https://ai.studio/apps/da03d632-5f9e-46bd-be41-55ba93e39a8c
+## Tech Stack
+- **React**: Frontend framework.
+- **Firebase**: Database and Authentication.
+- **Tailwind CSS**: Styling.
+- **Zustand**: State management.
 
-## Run Locally
+## How to run
+1. Clone the repo.
+2. Run `npm install`.
+3. Run `npm run dev`.
 
-**Prerequisites:**  Node.js
-
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Future Improvements
+- Add more themes.
+- Implement shared lists.
+- Better mobile responsiveness.
