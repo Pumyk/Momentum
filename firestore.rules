@@ -1,0 +1,97 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function hasOnlyAllowedFields(allowedFields) {
+      return request.resource.data.keys().hasOnly(allowedFields);
+    }
+    
+    // Domain Validators
+    function isValidUser() {
+      return hasOnlyAllowedFields(['email', 'displayName', 'score', 'settings']) &&
+        request.resource.data.email is string &&
+        request.resource.data.displayName is string &&
+        request.resource.data.score is number &&
+        request.resource.data.score >= 0 &&
+        ( !('settings' in request.resource.data) || request.resource.data.settings is map );
+    }
+
+    function isValidFolder() {
+      return hasOnlyAllowedFields(['name', 'order']) &&
+        request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 100 &&
+        request.resource.data.order is number;
+    }
+
+    function isValidList() {
+      return hasOnlyAllowedFields(['name', 'color', 'folderId', 'isShared']) &&
+        request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 100 &&
+        request.resource.data.color is string && request.resource.data.color.size() <= 20 &&
+        request.resource.data.isShared is bool &&
+        ( !('folderId' in request.resource.data) || request.resource.data.folderId == null || request.resource.data.folderId is string );
+    }
+
+    function isValidTask() {
+      return hasOnlyAllowedFields(['title', 'description', 'listId', 'dueDate', 'priority', 'status', 'tags', 'subtasks', 'createdAt', 'completedAt']) &&
+        request.resource.data.title is string && request.resource.data.title.size() > 0 && request.resource.data.title.size() <= 500 &&
+        ( !('description' in request.resource.data) || request.resource.data.description is string && request.resource.data.description.size() <= 10000 ) &&
+        request.resource.data.listId is string &&
+        ( !('dueDate' in request.resource.data) || request.resource.data.dueDate == null || request.resource.data.dueDate is timestamp ) &&
+        request.resource.data.priority is number && request.resource.data.priority >= 1 && request.resource.data.priority <= 4 &&
+        request.resource.data.status in ['todo', 'in-progress', 'completed'] &&
+        ( !('tags' in request.resource.data) || (request.resource.data.tags is list && request.resource.data.tags.size() <= 20) ) &&
+        ( !('subtasks' in request.resource.data) || (request.resource.data.subtasks is list && request.resource.data.subtasks.size() <= 100) ) &&
+        request.resource.data.createdAt is timestamp &&
+        ( !('completedAt' in request.resource.data) || request.resource.data.completedAt == null || request.resource.data.completedAt is timestamp );
+    }
+
+    function isValidHabit() {
+      return hasOnlyAllowedFields(['name', 'icon', 'frequency', 'currentStreak', 'longestStreak', 'logs']) &&
+        request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 100 &&
+        request.resource.data.icon is string && request.resource.data.icon.size() <= 50 &&
+        request.resource.data.frequency is map &&
+        request.resource.data.currentStreak is number && request.resource.data.currentStreak >= 0 &&
+        request.resource.data.longestStreak is number && request.resource.data.longestStreak >= 0 &&
+        ( !('logs' in request.resource.data) || (request.resource.data.logs is list && request.resource.data.logs.size() <= 10000) );
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser();
+      allow update: if isOwner(userId) && isValidUser();
+      
+      match /folders/{folderId} {
+        allow read, delete: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidFolder();
+        allow update: if isOwner(userId) && isValidFolder();
+      }
+      
+      match /lists/{listId} {
+        allow read, delete: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidList();
+        allow update: if isOwner(userId) && isValidList();
+      }
+      
+      match /tasks/{taskId} {
+        allow read, delete: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidTask();
+        allow update: if isOwner(userId) && isValidTask() && 
+          request.resource.data.createdAt == resource.data.createdAt; // Immutable
+      }
+      
+      match /habits/{habitId} {
+        allow read, delete: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidHabit();
+        allow update: if isOwner(userId) && isValidHabit();
+      }
+    }
+  }
+}

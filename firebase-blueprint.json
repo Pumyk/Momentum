@@ -1,0 +1,92 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user of the application.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "score": { "type": "number" },
+        "settings": { "type": "object" }
+      },
+      "required": ["email", "displayName", "score"]
+    },
+    "Folder": {
+      "title": "Folder",
+      "description": "A folder containing multiple lists.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "order": { "type": "number" }
+      },
+      "required": ["name", "order"]
+    },
+    "List": {
+      "title": "List",
+      "description": "A list of tasks.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "color": { "type": "string" },
+        "folderId": { "type": "string", "description": "Nullable folder ID" },
+        "isShared": { "type": "boolean" }
+      },
+      "required": ["name", "color", "isShared"]
+    },
+    "Task": {
+      "title": "Task",
+      "description": "A task item.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "listId": { "type": "string" },
+        "dueDate": { "type": "string", "format": "date-time" },
+        "priority": { "type": "number" },
+        "status": { "type": "string", "enum": ["todo", "in-progress", "completed"] },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "subtasks": { "type": "array", "items": { "type": "object" } },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "completedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "listId", "priority", "status", "createdAt"]
+    },
+    "Habit": {
+      "title": "Habit",
+      "description": "A habit to track.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "icon": { "type": "string" },
+        "frequency": { "type": "object" },
+        "currentStreak": { "type": "number" },
+        "longestStreak": { "type": "number" },
+        "logs": { "type": "array", "items": { "type": "string", "format": "date-time" } }
+      },
+      "required": ["name", "icon", "frequency", "currentStreak", "longestStreak"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profiles."
+    },
+    "/users/{userId}/folders/{folderId}": {
+      "schema": { "$ref": "#/entities/Folder" },
+      "description": "Folders for organizing lists."
+    },
+    "/users/{userId}/lists/{listId}": {
+      "schema": { "$ref": "#/entities/List" },
+      "description": "Task lists."
+    },
+    "/users/{userId}/tasks/{taskId}": {
+      "schema": { "$ref": "#/entities/Task" },
+      "description": "Tasks."
+    },
+    "/users/{userId}/habits/{habitId}": {
+      "schema": { "$ref": "#/entities/Habit" },
+      "description": "Habits."
+    }
+  }
+}
