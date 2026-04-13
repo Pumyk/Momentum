@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { auth, googleProvider } from '../firebase';
-import { signInWithPopup, onAuthStateChanged, User } from 'firebase/auth';
+import { signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, User } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
 import { Zap, AlertCircle, Loader2, Cookie } from 'lucide-react';
 import {
@@ -20,6 +20,12 @@ export function Auth({ children }: { children: React.ReactNode }) {
   const [showCookieDialog, setShowCookieDialog] = useState(false);
 
   useEffect(() => {
+    // Handle the result of signInWithRedirect (if the user just came back from Google)
+    getRedirectResult(auth).catch((err) => {
+      console.error("Redirect auth error:", err);
+      setError("Failed to sign in via redirect. Please try again.");
+    });
+
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setLoading(false);
@@ -32,7 +38,16 @@ export function Auth({ children }: { children: React.ReactNode }) {
     setError(null);
     setIsSigningIn(true);
     try {
-      await signInWithPopup(auth, googleProvider);
+      // Smart Sign-in: 
+      // If we are in an iframe (like the AI Studio preview), use Popup to avoid 403 errors.
+      // If we are on the live site (Vercel), use Redirect to bypass mobile/Safari cookie blockers.
+      const isIframe = window.self !== window.top;
+      
+      if (isIframe) {
+        await signInWithPopup(auth, googleProvider);
+      } else {
+        await signInWithRedirect(auth, googleProvider);
+      }
     } catch (err: any) {
       console.error('Error signing in:', err);
       if (err.code !== 'auth/popup-closed-by-user') {
@@ -40,6 +55,7 @@ export function Auth({ children }: { children: React.ReactNode }) {
         setShowCookieDialog(true);
       }
     } finally {
+      // Note: If signInWithRedirect is called, the page will navigate away before this runs.
       setIsSigningIn(false);
     }
   };
