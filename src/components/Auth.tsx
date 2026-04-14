@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { auth, googleProvider } from '../firebase';
 import { signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, User } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
-import { Zap, AlertCircle, Loader2, Cookie } from 'lucide-react';
+import { Zap, AlertCircle, Loader2, Cookie, ExternalLink } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -20,10 +20,13 @@ export function Auth({ children }: { children: React.ReactNode }) {
   const [showCookieDialog, setShowCookieDialog] = useState(false);
 
   useEffect(() => {
-    // Handle the result of signInWithRedirect (if the user just came back from Google)
+    // Check if we just returned from a redirect sign-in
     getRedirectResult(auth).catch((err) => {
       console.error("Redirect auth error:", err);
-      setError("Failed to sign in via redirect. Please try again.");
+      // Only show error if it's not a "no result" case
+      if (err.code !== 'auth/no-current-user') {
+        setError("Sign-in failed. Please try again.");
+      }
     });
 
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -34,28 +37,36 @@ export function Auth({ children }: { children: React.ReactNode }) {
     return unsubscribe;
   }, []);
 
-  const handleSignIn = async () => {
+  const handlePopupSignIn = async () => {
     setError(null);
     setIsSigningIn(true);
     try {
-      // Smart Sign-in: 
-      // If we are in an iframe (like the AI Studio preview), use Popup to avoid 403 errors.
-      // If we are on the live site (Vercel), use Redirect to bypass mobile/Safari cookie blockers.
-      const isIframe = window.self !== window.top;
-      
-      if (isIframe) {
-        await signInWithPopup(auth, googleProvider);
-      } else {
-        await signInWithRedirect(auth, googleProvider);
-      }
+      await signInWithPopup(auth, googleProvider);
     } catch (err: any) {
-      console.error('Error signing in:', err);
-      if (err.code !== 'auth/popup-closed-by-user') {
-        setError("Sign-in failed. Your browser might be blocking third-party cookies.");
+      console.error('Popup sign-in error:', err);
+      if (err.code === 'auth/popup-blocked') {
+        setError("The sign-in popup was blocked by your browser. Please allow popups for this site.");
+      } else if (err.code === 'auth/popup-closed-by-user') {
+        // User closed it, no need for error
+      } else {
+        setError("Sign-in failed. This often happens on mobile or Safari due to cookie settings.");
         setShowCookieDialog(true);
       }
     } finally {
-      // Note: If signInWithRedirect is called, the page will navigate away before this runs.
+      setIsSigningIn(false);
+    }
+  };
+
+  const handleRedirectSignIn = async () => {
+    setError(null);
+    setIsSigningIn(true);
+    try {
+      // Note: This will fail with a 403 error inside the AI Studio preview iframe.
+      // It is intended for use on the live Vercel site only.
+      await signInWithRedirect(auth, googleProvider);
+    } catch (err: any) {
+      console.error('Redirect sign-in error:', err);
+      setError("Redirect sign-in failed: " + err.message);
       setIsSigningIn(false);
     }
   };
@@ -83,27 +94,32 @@ export function Auth({ children }: { children: React.ReactNode }) {
             </div>
           )}
 
-          <Button 
-            onClick={handleSignIn} 
-            size="lg" 
-            className="w-full"
-            disabled={isSigningIn}
-          >
-            {isSigningIn ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Signing in...
-              </>
-            ) : (
-              "Sign in with Google"
-            )}
-          </Button>
-
-          {error && (
-            <Button variant="link" onClick={() => setShowCookieDialog(true)} className="text-zinc-500">
-              How to fix sign-in issues?
+          <div className="w-full space-y-3">
+            <Button 
+              onClick={handlePopupSignIn} 
+              size="lg" 
+              className="w-full"
+              disabled={isSigningIn}
+            >
+              {isSigningIn ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Signing in...
+                </>
+              ) : (
+                "Sign in with Google"
+              )}
             </Button>
-          )}
+
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setShowCookieDialog(true)} 
+              className="w-full text-xs text-zinc-400 hover:text-zinc-600"
+            >
+              Trouble signing in?
+            </Button>
+          </div>
         </div>
 
         <Dialog open={showCookieDialog} onOpenChange={setShowCookieDialog}>
@@ -111,37 +127,52 @@ export function Auth({ children }: { children: React.ReactNode }) {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Cookie className="h-5 w-5 text-blue-500" />
-                Allow Cookies to Sign In
+                Sign-In Help
               </DialogTitle>
               <DialogDescription>
-                Google Sign-In requires third-party cookies to securely authenticate you. If you are using Safari, Brave, or Incognito mode, they might be blocked.
+                If the standard sign-in isn't working, it's usually because your browser is blocking popups or third-party cookies.
               </DialogDescription>
             </DialogHeader>
             
             <div className="space-y-4 py-4 text-sm text-zinc-700 dark:text-zinc-300">
-              <div className="space-y-2">
-                <h4 className="font-semibold text-zinc-900 dark:text-zinc-100">Safari (iOS/Mac)</h4>
-                <ol className="list-inside list-decimal space-y-1">
-                  <li>Open <strong>Settings</strong> &gt; <strong>Safari</strong></li>
-                  <li>Scroll to <strong>Privacy & Security</strong></li>
-                  <li>Turn <strong>OFF</strong> "Prevent Cross-Site Tracking"</li>
-                  <li>Turn <strong>OFF</strong> "Block All Cookies"</li>
-                </ol>
+              <div className="rounded-lg border border-blue-100 bg-blue-50/50 p-4 dark:border-blue-900/30 dark:bg-blue-900/10">
+                <h4 className="mb-2 font-semibold text-blue-700 dark:text-blue-400">Option 1: Try Redirect Method</h4>
+                <p className="mb-3 text-xs leading-relaxed">
+                  This method is more reliable on mobile and Safari. It will temporarily leave this page to sign you in.
+                </p>
+                <Button 
+                  onClick={handleRedirectSignIn} 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full bg-white dark:bg-zinc-900"
+                  disabled={isSigningIn}
+                >
+                  <ExternalLink className="mr-2 h-3 w-3" />
+                  Use Redirect Sign-In
+                </Button>
+                <p className="mt-2 text-[10px] text-zinc-400 italic">
+                  Note: This will not work inside the AI Studio preview.
+                </p>
               </div>
-              
+
               <div className="space-y-2">
-                <h4 className="font-semibold text-zinc-900 dark:text-zinc-100">Chrome (Mobile)</h4>
-                <ol className="list-inside list-decimal space-y-1">
-                  <li>Tap the <strong>3 dots</strong> menu &gt; <strong>Settings</strong></li>
-                  <li>Go to <strong>Site Settings</strong> &gt; <strong>Cookies</strong></li>
-                  <li>Select <strong>Allow cookies</strong></li>
-                </ol>
+                <h4 className="font-semibold text-zinc-900 dark:text-zinc-100">Option 2: Check Browser Settings</h4>
+                <div className="space-y-3">
+                  <div>
+                    <p className="font-medium text-xs">Safari (iOS/Mac):</p>
+                    <p className="text-[11px] text-zinc-500">Settings &gt; Safari &gt; Turn OFF "Prevent Cross-Site Tracking" and "Block All Cookies".</p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-xs">Chrome (Mobile):</p>
+                    <p className="text-[11px] text-zinc-500">Settings &gt; Site Settings &gt; Cookies &gt; Select "Allow cookies".</p>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <DialogFooter className="sm:justify-end">
-              <Button type="button" onClick={() => setShowCookieDialog(false)}>
-                I understand, let me try again
+            <DialogFooter>
+              <Button variant="secondary" onClick={() => setShowCookieDialog(false)} className="w-full">
+                Close
               </Button>
             </DialogFooter>
           </DialogContent>
