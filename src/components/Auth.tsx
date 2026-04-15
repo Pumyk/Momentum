@@ -150,9 +150,6 @@ export function Auth({ children }: { children: React.ReactNode }) {
                   <ExternalLink className="mr-2 h-3 w-3" />
                   Use Redirect Sign-In
                 </Button>
-                <p className="mt-2 text-[10px] text-zinc-400 italic">
-                  Note: This will not work inside the AI Studio preview.
-                </p>
               </div>
 
               <div className="space-y-2">
